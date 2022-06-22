@@ -15,6 +15,9 @@ from config import (
 
 class Cloud:
     def __init__(self):
+        """
+        Class for working witn S3
+        """
         self.__s3 = boto3.client(
             's3',
             aws_access_key_id=AWS_SERVER_PUBLIC_KEY,
@@ -23,6 +26,11 @@ class Cloud:
         )
 
     def upload_file(self, upload_path: str, filename: str):
+        """
+        Upload to cloud file
+        :param upload_path: upload path
+        :param filename: filename
+        """
         self.__s3.upload_file(
             Filename=filename,
             Bucket=BUCKET_NAME,
@@ -30,13 +38,23 @@ class Cloud:
         )
 
     def upload_directory(self, upload_path: str, dirname: str):
+        """
+        Upload to cloud directory
+        :param upload_path: upload path
+        :param dirname: filename
+        """
         if os.path.exists(dirname):
             for filename in os.listdir(dirname):
                 self.upload_file(
                     f'{upload_path}/{filename}', f'{upload_path}/{filename}'
                 )
 
-    def download(self, id_: str, filename: str):
+    def download_file(self, id_: str, filename: str):
+        """
+        Download from cloud
+        :param id_: youtube id of video
+        :param filename: filename
+        """
         self.__s3.download_file(
             Filename=filename,
             Bucket=BUCKET_NAME,
@@ -46,10 +64,20 @@ class Cloud:
 
 class Database:
     def __init__(self, db_name: str = 'default'):
+        """
+        Class for working with db (sqlite3)
+        :param db_name: name of db
+        """
         self.__connection = sqlite3.connect(f'{db_name}.sqlite')
         self.__cursor = self.__connection.cursor()
 
     def save(self, tablename: str = 'videos', data: dict = None, columns: list = None):
+        """
+        Save data to db
+        :param tablename: name of table where save
+        :param data: data in dict
+        :param columns: name of columns for saving
+        """
         self.__create_table(tablename, columns)
         for key in data:
             columns = [data[key][col] for col in columns]
@@ -63,6 +91,11 @@ class Database:
         self.__connection.commit()
 
     def __create_table(self, tablename: str, columns: list):
+        """
+        Create table
+        :param tablename: name of table where save
+        :param columns: name of columns for saving
+        """
         columns = ', '.join(columns)
         self.__cursor.execute(
             f'''
@@ -74,6 +107,10 @@ class Database:
 
 class Video:
     def __init__(self, filename: str):
+        """
+        Class for working with video by CV2
+        :param filename: name of file on your local
+        """
         self.filename = filename
         self.__cap = cv2.VideoCapture(f'{filename}.mp4')
         self.__cap.set(cv2.CAP_PROP_POS_AVI_RATIO, 0)
@@ -85,6 +122,10 @@ class Video:
         self.__db = Database()
 
     def save_frames(self, each_fc: int = 24):
+        """
+        Save frames from video with face detecting
+        :param each_fc: how many frame wil be missed
+        """
         buf = np.empty(
             (self.frameCount, self.frameHeight, self.frameWidth, 3), np.dtype('uint8')
         )
@@ -109,11 +150,18 @@ class Video:
         self.__cap.release()
 
     def __save_meta_to_db(self):
+        """
+        Save metadata to db
+        """
         self.__db.save(
             tablename=self.filename, data=self.__facemeta, columns=['name', 'is_face']
         )
 
     def __detect_face(self, img):
+        """
+        Detect face by cv2
+        :param img: image
+        """
         is_face = False
         face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
